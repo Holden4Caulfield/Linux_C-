@@ -1,13 +1,22 @@
 #include<iostream>
 #include<queue>
+#include<string>
 
 using namespace std;
 
 class PCB
 {
 public:
+    PCB(string _name,int _size)
+    {
+        name=_name;
+        size=_size;
+    };
+    PCB()
+    {};
     string name;
     int size;
+
     void Set(string _name,int _size)
     {
         name=_name;
@@ -47,7 +56,8 @@ void Lock()
 
 void P(Semaphore &s)
 {
-    if(s.count==0)
+    //不允许连续两个P操作
+    if(s.count==0 && s.name=="mutex")
     {
         cout<<"错误操作，请重新输入"<<endl;
         return;
@@ -56,7 +66,7 @@ void P(Semaphore &s)
     if(s.count<0)
     {
         //调用进程进等待队列
-        Wait.push(Pcb_now);
+        s.wait_deque.push(Pcb_now);
         //block process
         Lock();
     }
@@ -64,17 +74,30 @@ void P(Semaphore &s)
 
 void V(Semaphore &s)
 {
-    ++s.count;
-    if(s.count>=0)
+    //连续两个V操作不允许
+    if(s.count >1 && s.name=="mutex")
     {
-        if(s.name=="mutex")
-        {
-            cout<<"取消互斥"<<endl;
-        }
-        Buffer.push(Wait.front());
+        cout<<"错误操作，请重新输入"<<endl;
+        return;
+    }
+    ++s.count;
+    if(s.count<=0)
+    {
+        Ready.push(s.wait_deque.front());
     }
 }
-
+void Running(PCB &pcb,string tag)
+{
+    if(tag=="P")
+    {
+        Buffer.push(pcb);
+    }
+    else
+    {
+        Buffer.pop();
+    }
+    
+}
 void TraverseAll(queue<PCB>Wait_s,queue<PCB>Buffer_s,queue<PCB>Ready_s)
 {
     cout<<"wait_queue: "<<endl;
@@ -103,11 +126,11 @@ void TraverseAll(queue<PCB>Wait_s,queue<PCB>Buffer_s,queue<PCB>Ready_s)
 int main()
 {
     Pcb_now.Set("helo",5);
-
+    empty.count=0;
     //创建5个进程
-    for(int i=0;i<6,i++)
+    for(int i=0;i<6;i++)
     {
-        PCB p(to_string(i),i*10);
+        PCB p(to_string(i),i);
     }
     P(empty);
     P(mutex);
@@ -117,5 +140,5 @@ int main()
     P(mutex);
     V(mutex);
     TraverseAll(Wait,Buffer,Ready);
-
+    cout<<"end";
 }
