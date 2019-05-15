@@ -125,20 +125,71 @@ void TraverseAll(queue<PCB>Wait_s,queue<PCB>Buffer_s,queue<PCB>Ready_s)
 
 int main()
 {
+    int it=0;
     Pcb_now.Set("helo",5);
-    empty.count=0;
+    //empty.count=0;
     //创建5个进程
-    for(int i=0;i<6;i++)
-    {
-        PCB p(to_string(i),i);
-    }
-    P(empty);
-    P(mutex);
-    Buffer.push(Pcb_now);
+    // for(int i=0;i<6;i++)
+    // {
+    //     PCB p(to_string(i),i);
+    // }
+    // P(empty);
+    // P(mutex);
+    // Buffer.push(Pcb_now);
 
-    cout<<"-------------------------------"<<endl;
-    P(mutex);
-    V(mutex);
+    // cout<<"-------------------------------"<<endl;
+    // P(mutex);
+    // V(mutex);
+    cout<<"输入P(生产)/C(消费）,输入eof结束"<<endl;
+    string tag;
+    while(cin>>tag)
+    {
+        if(tag=="eof")break;
+        //创建一个资源
+        PCB p(to_string(it),it++);
+        if(tag=="P")
+        {
+            P(empty);
+            cout<<"输入P(生产)/C(消费)"<<endl;
+            string tag2;
+            cin>>tag2;
+            if(tag2=="P")
+            {
+                P(mutex);
+                Running(p,"P");
+                V(mutex);
+            }
+            else if (tag2=="C")
+            {
+                P(mutex);
+                Running(p,"C");
+                V(mutex);
+            }    
+        }
+        else if (tag=="C")
+        {
+            P(full);
+            cout<<"输入P(生产)/C(消费)"<<endl;
+            string tag2;
+            cin>>tag2;
+            if(tag2=="P")
+            {
+                P(mutex);
+                Running(p,"P");
+                V(mutex);
+            }
+            else if (tag2=="C")
+            {
+                P(mutex);
+                Running(p,"C");
+                V(mutex);
+            }    
+        }
+        
+
+
+        cout<<"输入P(生产)/C(消费）,输入eof结束"<<endl;    
+    }
     TraverseAll(Wait,Buffer,Ready);
     cout<<"end";
 }
