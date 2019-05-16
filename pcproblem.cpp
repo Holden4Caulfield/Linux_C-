@@ -4,6 +4,8 @@
 
 using namespace std;
 
+int lock_ready=0;
+
 class PCB
 {
 public:
@@ -49,56 +51,71 @@ Semaphore full(0,"full");
 Semaphore empty(6,"empty");
 Semaphore mutex(1,"mutex");
 
-void Lock()
+void Lock_Load()
 {
+    if(lock_ready==0){
+    lock_ready=1;
+    }
+}
 
+void Un_Lock()
+{
+    if(lock_ready==1)
+    {
+        lock_ready=0;
+    }
 }
 
 void P(Semaphore &s)
 {
     //不允许连续两个P操作
-    if(s.count==0 && s.name=="mutex")
-    {
-        cout<<"错误操作，请重新输入"<<endl;
-        return;
-    }
+    // if(s.count==0 && s.name=="mutex")
+    // {
+    //     cout<<"错误操作，请重新输入"<<endl;
+    //     return;
+    // }
     --s.count;
     if(s.count<0)
     {
         //调用进程进等待队列
         s.wait_deque.push(Pcb_now);
         //block process
-        Lock();
+        Lock_Load();
     }
 }
 
 void V(Semaphore &s)
 {
-    //连续两个V操作不允许
-    if(s.count >1 && s.name=="mutex")
-    {
-        cout<<"错误操作，请重新输入"<<endl;
-        return;
-    }
+    Un_Lock();
+    // //连续两个V操作不允许
+    //     if(s.count >1 && s.name=="mutex")
+    // {
+    //     cout<<"错误操作，请重新输入"<<endl;
+    //     return;
+    // }
     ++s.count;
     if(s.count<=0)
     {
         Ready.push(s.wait_deque.front());
     }
 }
-void Running(PCB &pcb,string tag)
+
+//Runing，消费者取数据，从Buffer中。生产者从Ready中提交到Buffer
+void Running(PCB pcb,string tag)
 {
     if(tag=="P")
     {
-        Buffer.push(pcb);
+        cout<<Ready.front().name+" 存入缓冲区"<<endl;
+        Buffer.push(Ready.front());
+        Ready.pop();
     }
     else
     {
-        Buffer.pop();
+        cout<<Buffer.front().name+" 已经从缓冲区里取出"<<endl;
     }
     
 }
-void TraverseAll(queue<PCB>Wait_s,queue<PCB>Buffer_s,queue<PCB>Ready_s)
+void TraverseQue(queue<PCB>Wait_s,queue<PCB>Buffer_s,queue<PCB>Ready_s)
 {
     cout<<"wait_queue: "<<endl;
     while (!Wait_s.empty())
@@ -123,73 +140,41 @@ void TraverseAll(queue<PCB>Wait_s,queue<PCB>Buffer_s,queue<PCB>Ready_s)
     cout<<endl;
 }
 
+void TraverseSem(Semaphore s)
+{
+    cout<<s.name+" 等待队列: "<<endl;
+    while(!s.wait_deque.empty())
+    {
+        cout<<s.wait_deque.front().name<<endl;
+        s.wait_deque.pop();
+    }
+}
+
 int main()
 {
-    int it=0;
-    Pcb_now.Set("helo",5);
-    //empty.count=0;
-    //创建5个进程
-    // for(int i=0;i<6;i++)
-    // {
-    //     PCB p(to_string(i),i);
-    // }
-    // P(empty);
-    // P(mutex);
-    // Buffer.push(Pcb_now);
-
-    // cout<<"-------------------------------"<<endl;
-    // P(mutex);
-    // V(mutex);
-    cout<<"输入P(生产)/C(消费）,输入eof结束"<<endl;
-    string tag;
-    while(cin>>tag)
+    int it=0;int t=7;
+    while(t-->0)
     {
-        if(tag=="eof")break;
-        //创建一个资源
-        PCB p(to_string(it),it++);
-        if(tag=="P")
+        Pcb_now.Set(to_string(it),it*10);
+        it++;
+        P(empty);
+        if(!lock_ready)
         {
-            P(empty);
-            cout<<"输入P(生产)/C(消费)"<<endl;
-            string tag2;
-            cin>>tag2;
-            if(tag2=="P")
-            {
-                P(mutex);
-                Running(p,"P");
-                V(mutex);
-            }
-            else if (tag2=="C")
-            {
-                P(mutex);
-                Running(p,"C");
-                V(mutex);
-            }    
+        Ready.push(Pcb_now);
         }
-        else if (tag=="C")
+//        Ready.push(Pcb_now);
+        if(t>=1)
         {
-            P(full);
-            cout<<"输入P(生产)/C(消费)"<<endl;
-            string tag2;
-            cin>>tag2;
-            if(tag2=="P")
-            {
-                P(mutex);
-                Running(p,"P");
-                V(mutex);
-            }
-            else if (tag2=="C")
-            {
-                P(mutex);
-                Running(p,"C");
-                V(mutex);
-            }    
+        P(mutex);
+        Running(Pcb_now,"P");
+        V(mutex);
         }
-        
-
-
-        cout<<"输入P(生产)/C(消费）,输入eof结束"<<endl;    
+        V(full);
     }
-    TraverseAll(Wait,Buffer,Ready);
+    
+    TraverseSem(empty);
+    cout<<"------------------------"<<endl;
+    TraverseQue(Wait,Buffer,Ready);
     cout<<"end";
+    return 0;
 }
